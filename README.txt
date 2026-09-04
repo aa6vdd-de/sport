@@ -1,11 +1,11 @@
-تحديث زر حذف الطلبات
+تحديث الإخفاء فقط
 
-- أضيف زر "حذف" بجانب عرض/قبول/رفض.
-- عند الضغط عليه يظهر تأكيد قبل الحذف.
-- الحذف يزيل الطلب من Firestore، لذلك يختفي من الموقع والعدادات فوراً.
-- الرد الأصلي يبقى محفوظاً في Google Sheet كسجل مرجعي.
+- زر "إخفاء" لا يحذف الطلب من Firebase ولا من Google Sheet.
+- عند الضغط عليه يتم وضع hidden=true في Firestore.
+- الموقع يستبعد الطلبات المخفية من الجدول ومن العدادات.
+- الطلب يبقى محفوظاً للرجوع إليه لاحقاً.
 
-بعد تحديث Code.gs:
-Deploy > Manage deployments > Edit > New version > Deploy
-
-ثم استبدل index.html في GitHub بالنسخة الجديدة.
+طريقة التحديث:
+1) استبدل index.html في GitHub.
+2) استبدل Code.gs في Apps Script.
+3) Deploy > Manage deployments > Edit > New version > Deploy.

@@ -223,7 +223,7 @@ function render(){
     const st = normalizeStatus(b.status);
     let actions = `
       <button class="btn btn-view" data-action="view" data-id="${esc(b.id)}">عرض</button>
-      <button class="btn btn-delete" data-action="delete" data-id="${esc(b.id)}">حذف</button>`;
+      <button class="btn btn-delete" data-action="hide" data-id="${esc(b.id)}">إخفاء</button>`;
     if (st === "جديد"){
       actions += `
         <button class="btn btn-accept" data-action="accept" data-id="${esc(b.id)}">قبول</button>
@@ -373,21 +373,23 @@ ${booking.rejectionReason ? "سبب الرفض: " + booking.rejectionReason : ""
     return;
   }
 
-  if (action === "delete"){
+  if (action === "hide"){
     const label = booking.activityName || booking.name || "هذا الطلب";
-    const ok = confirm(`هل أنت متأكد من حذف الطلب "${label}" من النظام؟\n\nلن يظهر في الموقع بعد الحذف.`);
+    const ok = confirm(`هل تريد إخفاء الطلب "${label}" من الموقع؟
+
+سيبقى محفوظًا في Google Sheet وFirebase، لكنه لن يظهر في الموقع.`);
     if (!ok) return;
 
     const old = btn.textContent;
     btn.disabled = true;
-    btn.textContent = "جارٍ الحذف...";
+    btn.textContent = "جارٍ الإخفاء...";
 
     try{
-      await callAppsScript({action:"delete", id});
-      showNotice("تم حذف الطلب من النظام.");
+      await callAppsScript({action:"hide", id});
+      showNotice("تم إخفاء الطلب من الموقع.");
     }catch(err){
       console.error(err);
-      alert("تعذر حذف الطلب: " + err.message);
+      alert("تعذر إخفاء الطلب: " + err.message);
     }finally{
       btn.disabled = false;
       btn.textContent = old;
@@ -410,13 +412,13 @@ document.querySelector(".refresh")?.addEventListener("click", () => location.rel
 try{
   const q = query(bookingsRef, orderBy("createdAt", "desc"));
   onSnapshot(q, snap => {
-    bookings = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    bookings = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(b => b.hidden !== true);
     render();
   }, err => {
     console.error(err);
     // Fallback if old records do not yet have createdAt
     onSnapshot(bookingsRef, snap => {
-      bookings = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      bookings = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(b => b.hidden !== true);
       render();
     }, err2 => {
       console.error(err2);

@@ -82,7 +82,7 @@ function doGet(e) {
   const callback = safeCallback_(e && e.parameter && e.parameter.callback);
   try {
     const action = String((e && e.parameter && e.parameter.action) || "").trim();
-    if (!["accept", "reject", "delete"].includes(action)) {
+    if (!["accept", "reject", "hide"].includes(action)) {
       return jsonp_(callback, {ok: true, message: "Sports booking API is running."});
     }
 
@@ -91,9 +91,9 @@ function doGet(e) {
 
     const reason = String(e.parameter.reason || "").trim();
 
-    if (action === "delete") {
-      deleteBooking_(id);
-      return jsonp_(callback, {ok: true, status: "deleted"});
+    if (action === "hide") {
+      hideBooking_(id);
+      return jsonp_(callback, {ok: true, status: "hidden"});
     }
 
     if (action === "reject" && !reason) {
@@ -159,6 +159,18 @@ function sendRowToFirebase_(sheet, row) {
   const documentId = "row_" + row;
 
   const url = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/${COLLECTION}/${encodeURIComponent(documentId)}`;
+
+  let existingHidden = false;
+  try {
+    const existing = getFirestoreDocument_(documentId);
+    existingHidden =
+      existing &&
+      existing.fields &&
+      existing.fields.hidden &&
+      existing.fields.hidden.booleanValue === true;
+  } catch (_) {
+    existingHidden = false;
+  }
 
   const fields = {
     name: {stringValue: String(data.name || "")},
@@ -231,24 +243,34 @@ function findParticipantsByHeader_(sheet, row) {
 
 
 /**
- * حذف الطلب من Firestore.
- * يبقى الرد الأصلي محفوظاً في Google Sheet كسجل مرجعي.
+ * إخفاء الطلب من الموقع فقط.
+ * الطلب يبقى محفوظاً في Firestore وGoogle Sheet.
  */
-function deleteBooking_(documentId) {
-  const url =
+function hideBooking_(documentId) {
+  const base =
     `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/${COLLECTION}/${encodeURIComponent(documentId)}`;
 
+  const url = base + "?updateMask.fieldPaths=hidden&updateMask.fieldPaths=hiddenAt";
+
+  const body = {
+    fields: {
+      hidden: { booleanValue: true },
+      hiddenAt: { timestampValue: new Date().toISOString() }
+    }
+  };
+
   const response = UrlFetchApp.fetch(url, {
-    method: "delete",
+    method: "patch",
+    contentType: "application/json",
+    payload: JSON.stringify(body),
     muteHttpExceptions: true
   });
 
-  const code = response.getResponseCode();
+  const responseCode = response.getResponseCode();
 
-  // 200 = تم الحذف، 404 = غير موجود أصلاً
-  if (code !== 200 && code !== 404) {
+  if (responseCode < 200 || responseCode >= 300) {
     throw new Error(
-      "تعذر حذف الطلب من Firestore: " + response.getContentText()
+      "تعذر إخفاء الطلب من الموقع: " + response.getContentText()
     );
   }
 }
