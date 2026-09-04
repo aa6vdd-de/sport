@@ -1,0 +1,259 @@
+
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>نظام إدارة حجوزات الأنشطة الرياضية</title>
+  <style>
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Tahoma,Arial,sans-serif;background:#f4f6f9;color:#172033}
+    .top{background:#18243a;color:#fff;padding:24px 28px}
+    .top h1{margin:0;font-size:25px}.top p{margin:7px 0 0;opacity:.8}
+    .wrap{max-width:1400px;margin:auto;padding:24px}
+    .stats{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:20px}
+    .stat,.panel{background:#fff;border-radius:16px;padding:18px;box-shadow:0 5px 18px #00000010}
+    .stat span{display:block;color:#687386;font-size:13px}.stat b{font-size:28px}
+    .filters{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px}
+    input,select,textarea,button{font:inherit}
+    .filters input,.filters select{background:#fff;border:1px solid #dce2ea;border-radius:10px;padding:11px 12px}
+    .filters input{min-width:260px;flex:1}
+    table{width:100%;border-collapse:collapse;min-width:1050px}
+    th,td{padding:12px 10px;border-bottom:1px solid #edf0f4;text-align:right;font-size:14px}
+    th{background:#f8f9fb;color:#596579}
+    .tablebox{overflow:auto}.badge{display:inline-block;padding:6px 10px;border-radius:999px;font-size:12px;font-weight:bold}
+    .new{background:#fff4d8;color:#8b6400}.ok{background:#dff6e8;color:#18733c}.no{background:#fde3e3;color:#9b2727}.done{background:#e5ebff;color:#3452a3}
+    .btn{border:0;border-radius:9px;padding:8px 12px;cursor:pointer;font-weight:bold}
+    .accept{background:#1d874d;color:#fff}.reject{background:#b83d3d;color:#fff}.view{background:#e9edf5;color:#24324a}.report{background:#304f8f;color:#fff}
+    .actions{display:flex;gap:6px;flex-wrap:wrap}
+    .modal{position:fixed;inset:0;background:#0008;display:none;align-items:center;justify-content:center;padding:20px;z-index:30}
+    .modal.show{display:flex}.card{background:#fff;width:min(760px,100%);max-height:90vh;overflow:auto;border-radius:18px;padding:22px}
+    .card h2{margin-top:0}.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .field{background:#f7f8fa;border-radius:10px;padding:11px}.field small{display:block;color:#737f91;margin-bottom:4px}
+    textarea,input[type=number]{width:100%;border:1px solid #d9dee7;border-radius:9px;padding:10px;margin:6px 0 10px}
+    .close{float:left;background:#eef1f5;border:0;border-radius:8px;padding:7px 11px;cursor:pointer}
+    .empty{text-align:center;padding:40px;color:#7c8798}
+    @media(max-width:900px){.stats{grid-template-columns:1fr 1fr}.grid{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <div class="top">
+    <h1>نظام إدارة حجوزات الأنشطة الرياضية</h1>
+    <p>عمادة شؤون الطلاب - النشاط الرياضي</p>
+  </div>
+
+  <div class="wrap">
+    <div class="stats">
+      <div class="stat"><span>إجمالي الطلبات</span><b id="sAll">0</b></div>
+      <div class="stat"><span>طلبات جديدة</span><b id="sNew">0</b></div>
+      <div class="stat"><span>مقبولة</span><b id="sOk">0</b></div>
+      <div class="stat"><span>مرفوضة</span><b id="sNo">0</b></div>
+      <div class="stat"><span>مكتملة</span><b id="sDone">0</b></div>
+    </div>
+
+    <div class="panel">
+      <div class="filters">
+        <input id="q" placeholder="بحث بالاسم أو النشاط أو البريد..." oninput="render()">
+        <select id="status" onchange="render()">
+          <option value="">كل الحالات</option>
+          <option>جديد</option><option>مقبول</option><option>مرفوض</option><option>مكتمل</option>
+        </select>
+        <select id="venue" onchange="render()"><option value="">كل المرافق</option></select>
+      </div>
+      <div class="tablebox">
+        <table>
+          <thead><tr>
+            <th>الاسم</th><th>النشاط / الفعالية</th><th>الفئة</th><th>المقر</th>
+            <th>التاريخ</th><th>الوقت</th><th>الحالة</th><th>الإجراءات</th>
+          </tr></thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal" id="detailModal">
+    <div class="card">
+      <button class="close" onclick="closeModal('detailModal')">إغلاق</button>
+      <h2>تفاصيل طلب الحجز</h2>
+      <div id="detailBody" class="grid"></div>
+    </div>
+  </div>
+
+  <div class="modal" id="decisionModal">
+    <div class="card">
+      <button class="close" onclick="closeModal('decisionModal')">إغلاق</button>
+      <h2 id="decisionTitle">قرار الطلب</h2>
+      <textarea id="decisionNote" rows="4" placeholder="ملاحظات القرار (اختياري، ومفيد عند الرفض)"></textarea>
+      <button class="btn accept" id="decisionButton">حفظ القرار وإرسال البريد</button>
+    </div>
+  </div>
+
+  <div class="modal" id="reportModal">
+    <div class="card">
+      <button class="close" onclick="closeModal('reportModal')">إغلاق</button>
+      <h2>التقرير النهائي</h2>
+      <label>عدد المشاركين الفعلي</label>
+      <input id="actualParticipants" type="number" min="0">
+      <label>ملخص تنفيذ الفعالية</label>
+      <textarea id="summary" rows="4"></textarea>
+      <label>ملاحظات</label>
+      <textarea id="reportNotes" rows="3"></textarea>
+      <label>روابط الصور الأربع</label>
+      <textarea id="imageLinks" rows="5" placeholder="ضع كل رابط صورة في سطر مستقل"></textarea>
+      <button class="btn report" onclick="submitReport()">حفظ التقرير وتحويل الطلب إلى مكتمل</button>
+    </div>
+  </div>
+
+<script>
+let bookings = [];
+let currentRow = null;
+let currentDecision = null;
+
+function load() {
+  google.script.run.withSuccessHandler(data => {
+    bookings = data || [];
+    setupVenues();
+    render();
+  }).withFailureHandler(showError).listBookings();
+}
+
+function val(o, keys) {
+  for (const k of keys) if (o[k]) return o[k];
+  return '';
+}
+
+function statusClass(s) {
+  return s==='مقبول'?'ok':s==='مرفوض'?'no':s==='مكتمل'?'done':'new';
+}
+
+function setupVenues() {
+  const select = document.getElementById('venue');
+  const vals = [...new Set(bookings.map(b => val(b,['مقر الحجز'])).filter(Boolean))];
+  select.innerHTML = '<option value="">كل المرافق</option>' +
+    vals.map(v=>`<option>${escapeHtml(v)}</option>`).join('');
+}
+
+function render() {
+  const q = document.getElementById('q').value.trim().toLowerCase();
+  const status = document.getElementById('status').value;
+  const venue = document.getElementById('venue').value;
+
+  const filtered = bookings.filter(b => {
+    const st = b['الحالة'] || 'جديد';
+    const hay = [
+      val(b,['الاسم']), val(b,['الإيميل','البريد الإلكتروني']),
+      val(b,['اسم النشاط أو الفعالية','اسم النشاط او الفعالية'])
+    ].join(' ').toLowerCase();
+    return (!q || hay.includes(q)) && (!status || st===status) && (!venue || val(b,['مقر الحجز'])===venue);
+  });
+
+  document.getElementById('sAll').textContent = bookings.length;
+  document.getElementById('sNew').textContent = bookings.filter(b => (b['الحالة']||'جديد')==='جديد').length;
+  document.getElementById('sOk').textContent = bookings.filter(b => b['الحالة']==='مقبول').length;
+  document.getElementById('sNo').textContent = bookings.filter(b => b['الحالة']==='مرفوض').length;
+  document.getElementById('sDone').textContent = bookings.filter(b => b['الحالة']==='مكتمل').length;
+
+  const tbody = document.getElementById('rows');
+  if (!filtered.length) {
+    tbody.innerHTML = '<tr><td colspan="8" class="empty">لا توجد طلبات مطابقة.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = filtered.map(b => {
+    const st = b['الحالة'] || 'جديد';
+    const row = b.__row;
+    const buttons = `
+      <button class="btn view" onclick="showDetails(${row})">عرض</button>
+      ${st==='جديد'?`
+        <button class="btn accept" onclick="openDecision(${row},'مقبول')">قبول</button>
+        <button class="btn reject" onclick="openDecision(${row},'مرفوض')">رفض</button>`:''}
+      ${st==='مقبول'?`<button class="btn report" onclick="openReport(${row})">التقرير النهائي</button>`:''}
+    `;
+    return `<tr>
+      <td>${escapeHtml(val(b,['الاسم']))}</td>
+      <td>${escapeHtml(val(b,['اسم النشاط أو الفعالية','اسم النشاط او الفعالية']))}</td>
+      <td>${escapeHtml(val(b,['الفئة']))}</td>
+      <td>${escapeHtml(val(b,['مقر الحجز']))}</td>
+      <td>${escapeHtml(val(b,['التاريخ']))}</td>
+      <td>${escapeHtml(val(b,['الوقت']))}</td>
+      <td><span class="badge ${statusClass(st)}">${st}</span></td>
+      <td><div class="actions">${buttons}</div></td>
+    </tr>`;
+  }).join('');
+}
+
+function findRow(row) { return bookings.find(b => Number(b.__row)===Number(row)); }
+
+function showDetails(row) {
+  const b = findRow(row); if(!b) return;
+  const fields = [
+    ['الاسم', val(b,['الاسم'])], ['الإيميل', val(b,['الإيميل','البريد الإلكتروني'])],
+    ['رقم الجوال', val(b,['رقم الجوال'])], ['اسم النشاط أو الفعالية', val(b,['اسم النشاط أو الفعالية','اسم النشاط او الفعالية'])],
+    ['الفئة', val(b,['الفئة'])], ['مقر الحجز', val(b,['مقر الحجز'])],
+    ['طريقة الحجز', val(b,['طريقة الحجز'])], ['التاريخ', val(b,['التاريخ'])],
+    ['الوقت', val(b,['الوقت'])], ['الحالة', b['الحالة'] || 'جديد'],
+    ['ملاحظات القرار', b['ملاحظات القرار'] || '']
+  ];
+  document.getElementById('detailBody').innerHTML = fields.map(([k,v]) =>
+    `<div class="field"><small>${escapeHtml(k)}</small><strong>${escapeHtml(v||'-')}</strong></div>`).join('');
+  openModal('detailModal');
+}
+
+function openDecision(row, decision) {
+  currentRow = row; currentDecision = decision;
+  document.getElementById('decisionTitle').textContent = decision==='مقبول'?'قبول طلب الحجز':'رفض طلب الحجز';
+  const btn = document.getElementById('decisionButton');
+  btn.textContent = decision==='مقبول'?'قبول وإرسال بريد الموافقة':'رفض وإرسال بريد الرفض';
+  btn.className = 'btn ' + (decision==='مقبول'?'accept':'reject');
+  btn.onclick = submitDecision;
+  document.getElementById('decisionNote').value = '';
+  openModal('decisionModal');
+}
+
+function submitDecision() {
+  const note = document.getElementById('decisionNote').value.trim();
+  const btn = document.getElementById('decisionButton');
+  btn.disabled = true; btn.textContent = 'جارٍ الحفظ...';
+  google.script.run.withSuccessHandler(() => {
+    closeModal('decisionModal'); load();
+  }).withFailureHandler(err => { btn.disabled=false; showError(err); })
+    .updateBookingStatus(currentRow, currentDecision, note);
+}
+
+function openReport(row) {
+  currentRow = row;
+  document.getElementById('actualParticipants').value = '';
+  document.getElementById('summary').value = '';
+  document.getElementById('reportNotes').value = '';
+  document.getElementById('imageLinks').value = '';
+  openModal('reportModal');
+}
+
+function submitReport() {
+  const links = document.getElementById('imageLinks').value.split('\n').map(x=>x.trim()).filter(Boolean);
+  if (links.length !== 4) {
+    alert('أدخل 4 روابط صور بالضبط، كل رابط في سطر.');
+    return;
+  }
+  google.script.run.withSuccessHandler(() => {
+    closeModal('reportModal'); load();
+  }).withFailureHandler(showError).saveFinalReport(
+    currentRow,
+    document.getElementById('actualParticipants').value,
+    document.getElementById('summary').value,
+    document.getElementById('reportNotes').value,
+    links
+  );
+}
+
+function openModal(id){ document.getElementById(id).classList.add('show'); }
+function closeModal(id){ document.getElementById(id).classList.remove('show'); }
+function showError(err){ alert('حدث خطأ: ' + (err && err.message ? err.message : err)); }
+function escapeHtml(v){ return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+
+load();
+</script>
+</body>
+</html>
