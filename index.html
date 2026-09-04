@@ -13,8 +13,8 @@
 body{margin:0;font-family:"Segoe UI",Tahoma,Arial,sans-serif;background:var(--bg);color:var(--text)}
 .app{display:flex;min-height:100vh}
 .sidebar{width:285px;background:linear-gradient(180deg,var(--green),var(--green-dark));color:#fff;padding:28px 18px;position:fixed;right:0;top:0;bottom:0;overflow:auto}
-.brand{display:flex;gap:15px;align-items:center;padding-bottom:26px;border-bottom:1px solid rgba(255,255,255,.14)}
-.logo{width:132px;height:82px;background:#fff;border-radius:18px;display:flex;align-items:center;justify-content:center;color:var(--green);font-weight:800;font-size:14px;text-align:center;line-height:1.5}
+.brand{display:block;text-align:center;padding-bottom:26px;border-bottom:1px solid rgba(255,255,255,.14)}
+
 .brand h2{margin:0;font-size:23px;line-height:1.45}.brand p{margin:5px 0 0;opacity:.85}
 .menu{margin-top:25px;display:grid;gap:9px}
 .menu-item{display:flex;align-items:center;gap:12px;padding:15px 17px;border-radius:14px;color:#fff;text-decoration:none;font-weight:600}
@@ -49,15 +49,14 @@ th,td{padding:17px 16px;border-bottom:1px solid #edf1ee;text-align:right;font-si
 <div class="app">
   <aside class="sidebar">
     <div class="brand">
-      <div class="logo">جامعة تبوك<br>University of Tabuk</div>
-      <div><h2>إدارة<br>النشاط الرياضي</h2><p>عمادة شؤون الطلاب</p></div>
+<div><h2>إدارة<br>النشاط الرياضي</h2><p>عمادة شؤون الطلاب</p></div>
     </div>
     <nav class="menu">
       <a class="menu-item active" href="#">⌂ <span>لوحة التحكم</span></a>
-      <a class="menu-item" href="#">◉ <span>طلبات جديدة</span><span class="badge-count">3</span></a>
+      <a class="menu-item" href="#">◉ <span>طلبات جديدة</span><span class="badge-count" id="newBadge">0</span></a>
       <a class="menu-item" href="#">✓ <span>المقبولة</span></a>
       <a class="menu-item" href="#">⌛ <span>بانتظار التنفيذ</span></a>
-      <a class="menu-item" href="#">▣ <span>التقارير النهائية</span><span class="badge-count">2</span></a>
+      <a class="menu-item" href="#">▣ <span>التقارير النهائية</span><span class="badge-count" id="reportsBadge">0</span></a>
       <a class="menu-item" href="#">□ <span>المكتملة</span></a>
       <a class="menu-item" href="#">× <span>المرفوضة</span></a>
       <a class="menu-item" href="#">↻ <span>تحديث البيانات</span></a>
@@ -87,10 +86,10 @@ th,td{padding:17px 16px;border-bottom:1px solid #edf1ee;text-align:right;font-si
       </div>
 
       <div class="stats">
-        <div class="stat total"><b>12</b><span>إجمالي الطلبات</span></div>
-        <div class="stat pending"><b>3</b><span>قيد المراجعة</span></div>
-        <div class="stat accept"><b>7</b><span>مقبول</span></div>
-        <div class="stat reject"><b>2</b><span>مرفوض</span></div>
+        <div class="stat total"><b id="totalCount">0</b><span>إجمالي الطلبات</span></div>
+        <div class="stat pending"><b id="pendingCount">0</b><span>قيد المراجعة</span></div>
+        <div class="stat accept"><b id="acceptedCount">0</b><span>مقبول</span></div>
+        <div class="stat reject"><b id="rejectedCount">0</b><span>مرفوض</span></div>
       </div>
 
       <div class="panel">
@@ -108,34 +107,175 @@ th,td{padding:17px 16px;border-bottom:1px solid #edf1ee;text-align:right;font-si
                 <th>#</th><th>مقدم الطلب</th><th>اسم النشاط أو الفعالية</th><th>البريد الإلكتروني</th><th>الفئة</th><th>مقر الحجز</th><th>التاريخ</th><th>الحالة</th><th>الإجراءات</th>
               </tr>
             </thead>
-            <tbody id="requestsBody">
-              <tr data-search="أحمد محمد بطولة كرة قدم">
-                <td>1</td><td>أحمد محمد</td><td>بطولة كرة قدم</td><td>ahmad@example.com</td><td>طلاب</td><td>الملعب الخارجي العشبي</td><td>2026/09/10</td>
-                <td><span class="status new">قيد المراجعة</span></td>
-                <td><button class="btn btn-view">عرض</button><button class="btn btn-accept">قبول</button><button class="btn btn-reject">رفض</button></td>
-              </tr>
-              <tr data-search="نورة علي فعالية اللياقة">
-                <td>2</td><td>نورة علي</td><td>فعالية اللياقة البدنية</td><td>nora@example.com</td><td>موظفين</td><td>صالة اللياقة</td><td>2026/09/12</td>
-                <td><span class="status accepted">مقبول</span></td><td><button class="btn btn-view">عرض</button></td>
-              </tr>
-              <tr data-search="سالم الشهري نشاط تايكوندو">
-                <td>3</td><td>سالم الشهري</td><td>نشاط تايكوندو</td><td>salem@example.com</td><td>المجتمع</td><td>صالة التايكوندو</td><td>2026/09/15</td>
-                <td><span class="status rejected">مرفوض</span></td><td><button class="btn btn-view">عرض</button></td>
-              </tr>
-            </tbody>
+            <tbody id="requestsBody"><tr><td colspan="9" style="text-align:center;padding:38px;color:#7c8a83">جارٍ الاتصال بقاعدة البيانات...</td></tr></tbody>
           </table>
         </div>
       </div>
     </section>
   </main>
 </div>
-<script>
-function filterRows(){
-  const q=document.getElementById('searchBox').value.trim().toLowerCase();
-  document.querySelectorAll('#requestsBody tr').forEach(row=>{
-    const hay=(row.dataset.search||row.innerText).toLowerCase();
-    row.style.display=!q||hay.includes(q)?'':'none';
+
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+import {
+  getFirestore, collection, onSnapshot, doc, updateDoc,
+  query, orderBy, serverTimestamp
+} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDwzp2PKjw5i9MkZt6nv1d0_xxBVG8EH0o",
+  authDomain: "sport-d2cb8.firebaseapp.com",
+  projectId: "sport-d2cb8",
+  storageBucket: "sport-d2cb8.firebasestorage.app",
+  messagingSenderId: "307367293110",
+  appId: "1:307367293110:web:a8721faa79c3f994d0b617",
+  measurementId: "G-PPQYP1Q182"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const bookingsRef = collection(db, "bookings");
+
+let bookings = [];
+
+function esc(v=""){
+  return String(v).replace(/[&<>"']/g, m => ({
+    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+  }[m]));
+}
+
+function normalizeStatus(status){
+  const s = String(status || "جديد").trim();
+  if (["مقبول","accepted"].includes(s)) return "مقبول";
+  if (["مرفوض","rejected"].includes(s)) return "مرفوض";
+  if (["مكتمل","completed"].includes(s)) return "مكتمل";
+  if (["بانتظار التنفيذ","pending_execution"].includes(s)) return "بانتظار التنفيذ";
+  return "جديد";
+}
+
+function statusHtml(status){
+  const s = normalizeStatus(status);
+  if (s === "مقبول") return '<span class="status accepted">مقبول</span>';
+  if (s === "مرفوض") return '<span class="status rejected">مرفوض</span>';
+  if (s === "مكتمل") return '<span class="status accepted">مكتمل</span>';
+  if (s === "بانتظار التنفيذ") return '<span class="status new">بانتظار التنفيذ</span>';
+  return '<span class="status new">قيد المراجعة</span>';
+}
+
+function render(){
+  const q = (document.getElementById("searchBox")?.value || "").trim().toLowerCase();
+  const rows = bookings.filter(b => {
+    const hay = [
+      b.name, b.activityName, b.email, b.category, b.venue, b.bookingMethod
+    ].join(" ").toLowerCase();
+    return !q || hay.includes(q);
   });
+
+  const total = bookings.length;
+  const pending = bookings.filter(b => normalizeStatus(b.status) === "جديد").length;
+  const accepted = bookings.filter(b => normalizeStatus(b.status) === "مقبول").length;
+  const rejected = bookings.filter(b => normalizeStatus(b.status) === "مرفوض").length;
+  const reports = bookings.filter(b => normalizeStatus(b.status) === "مكتمل").length;
+
+  document.getElementById("totalCount").textContent = total;
+  document.getElementById("pendingCount").textContent = pending;
+  document.getElementById("acceptedCount").textContent = accepted;
+  document.getElementById("rejectedCount").textContent = rejected;
+  document.getElementById("newBadge").textContent = pending;
+  document.getElementById("reportsBadge").textContent = reports;
+
+  const tbody = document.getElementById("requestsBody");
+  if (!rows.length){
+    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:38px;color:#7c8a83">لا توجد طلبات حجز حتى الآن</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = rows.map((b, i) => {
+    const st = normalizeStatus(b.status);
+    let actions = `<button class="btn btn-view" data-action="view" data-id="${esc(b.id)}">عرض</button>`;
+    if (st === "جديد"){
+      actions += `
+        <button class="btn btn-accept" data-action="accept" data-id="${esc(b.id)}">قبول</button>
+        <button class="btn btn-reject" data-action="reject" data-id="${esc(b.id)}">رفض</button>`;
+    }
+    return `
+      <tr>
+        <td>${i+1}</td>
+        <td>${esc(b.name || "-")}</td>
+        <td>${esc(b.activityName || "-")}</td>
+        <td>${esc(b.email || "-")}</td>
+        <td>${esc(b.category || "-")}</td>
+        <td>${esc(b.venue || "-")}</td>
+        <td>${esc(b.date || "-")}</td>
+        <td>${statusHtml(st)}</td>
+        <td>${actions}</td>
+      </tr>`;
+  }).join("");
+}
+
+window.filterRows = render;
+
+document.getElementById("requestsBody").addEventListener("click", async (e) => {
+  const btn = e.target.closest("button[data-action]");
+  if (!btn) return;
+
+  const id = btn.dataset.id;
+  const action = btn.dataset.action;
+  const booking = bookings.find(x => x.id === id);
+  if (!booking) return;
+
+  if (action === "view"){
+    alert(
+`الاسم: ${booking.name || "-"}
+البريد: ${booking.email || "-"}
+رقم الجوال: ${booking.phone || "-"}
+النشاط/الفعالية: ${booking.activityName || "-"}
+الفئة: ${booking.category || "-"}
+مقر الحجز: ${booking.venue || "-"}
+طريقة الحجز: ${booking.bookingMethod || "-"}
+التاريخ: ${booking.date || "-"}
+الوقت: ${booking.time || "-"}
+عدد المشاركين: ${booking.participantsCount || "-"}`
+    );
+    return;
+  }
+
+  const newStatus = action === "accept" ? "مقبول" : "مرفوض";
+  if (!confirm(`هل أنت متأكد من ${action === "accept" ? "قبول" : "رفض"} هذا الطلب؟`)) return;
+
+  try {
+    await updateDoc(doc(db, "bookings", id), {
+      status: newStatus,
+      decisionUpdatedAt: serverTimestamp()
+    });
+  } catch (err) {
+    console.error(err);
+    alert("تعذر تحديث الطلب. تأكد من تفعيل Firestore وقواعد الصلاحيات.");
+  }
+});
+
+document.querySelector(".refresh")?.addEventListener("click", () => location.reload());
+
+try{
+  const q = query(bookingsRef, orderBy("createdAt", "desc"));
+  onSnapshot(q, snap => {
+    bookings = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    render();
+  }, err => {
+    console.error(err);
+    // Fallback if old records do not yet have createdAt
+    onSnapshot(bookingsRef, snap => {
+      bookings = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      render();
+    }, err2 => {
+      console.error(err2);
+      document.getElementById("requestsBody").innerHTML =
+        '<tr><td colspan="9" style="text-align:center;padding:38px;color:#c43d37">تعذر الاتصال بـ Firestore. فعّل قاعدة البيانات وتحقق من Rules.</td></tr>';
+    });
+  });
+}catch(err){
+  console.error(err);
 }
 </script>
 </body>
