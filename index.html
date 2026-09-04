@@ -40,7 +40,7 @@ body{margin:0;font-family:"Segoe UI",Tahoma,Arial,sans-serif;background:var(--bg
 .table-wrap{overflow:auto}table{border-collapse:collapse;width:100%;min-width:1080px}
 th,td{padding:17px 16px;border-bottom:1px solid #edf1ee;text-align:right;font-size:14px}th{color:#6f7b75;background:#fbfcfb;font-weight:700}
 .status{display:inline-block;border-radius:999px;padding:7px 12px;font-weight:800;font-size:12px}.status.new{background:#fff4ce;color:#9b6b00}.status.accepted{background:#e1f5e9;color:#167847}.status.rejected{background:#ffe6e4;color:#bb3f38}
-.btn{border:0;border-radius:10px;padding:9px 13px;font-weight:800;cursor:pointer;margin-left:5px}.btn-view{background:#e8f3ed;color:var(--green)}.btn-accept{background:#0f7b4f;color:#fff}.btn-reject{background:#ffe8e6;color:#cf4138}
+.btn{border:0;border-radius:10px;padding:9px 13px;font-weight:800;cursor:pointer;margin-left:5px}.btn-view{background:#e8f3ed;color:var(--green)}.btn-accept{background:#0f7b4f;color:#fff}.btn-reject{background:#ffe8e6;color:#cf4138}.btn-delete{background:#f3f3f3;color:#7a2420;border:1px solid #ead3d1}
 @media(max-width:1000px){.sidebar{width:235px}.main{margin-right:235px;width:calc(100% - 235px)}.stats{grid-template-columns:repeat(2,1fr)}.content{padding:20px}}
 @media(max-width:760px){.sidebar{position:relative;width:100%;min-height:auto}.app{display:block}.main{margin-right:0;width:100%}.topbar{height:auto;padding:20px;gap:12px;flex-direction:column}.stats{grid-template-columns:1fr}.panel-head{flex-direction:column;align-items:stretch}.filters{flex-direction:column}.search{min-width:0;width:100%}}
 
@@ -221,7 +221,9 @@ function render(){
 
   tbody.innerHTML = rows.map((b, i) => {
     const st = normalizeStatus(b.status);
-    let actions = `<button class="btn btn-view" data-action="view" data-id="${esc(b.id)}">عرض</button>`;
+    let actions = `
+      <button class="btn btn-view" data-action="view" data-id="${esc(b.id)}">عرض</button>
+      <button class="btn btn-delete" data-action="delete" data-id="${esc(b.id)}">حذف</button>`;
     if (st === "جديد"){
       actions += `
         <button class="btn btn-accept" data-action="accept" data-id="${esc(b.id)}">قبول</button>
@@ -368,6 +370,28 @@ document.getElementById("requestsBody").addEventListener("click", async (e) => {
 الوقت: ${booking.time || "-"}
 ${booking.rejectionReason ? "سبب الرفض: " + booking.rejectionReason : ""}`
     );
+    return;
+  }
+
+  if (action === "delete"){
+    const label = booking.activityName || booking.name || "هذا الطلب";
+    const ok = confirm(`هل أنت متأكد من حذف الطلب "${label}" من النظام؟\n\nلن يظهر في الموقع بعد الحذف.`);
+    if (!ok) return;
+
+    const old = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = "جارٍ الحذف...";
+
+    try{
+      await callAppsScript({action:"delete", id});
+      showNotice("تم حذف الطلب من النظام.");
+    }catch(err){
+      console.error(err);
+      alert("تعذر حذف الطلب: " + err.message);
+    }finally{
+      btn.disabled = false;
+      btn.textContent = old;
+    }
     return;
   }
 

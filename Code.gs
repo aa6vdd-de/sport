@@ -82,7 +82,7 @@ function doGet(e) {
   const callback = safeCallback_(e && e.parameter && e.parameter.callback);
   try {
     const action = String((e && e.parameter && e.parameter.action) || "").trim();
-    if (!["accept", "reject"].includes(action)) {
+    if (!["accept", "reject", "delete"].includes(action)) {
       return jsonp_(callback, {ok: true, message: "Sports booking API is running."});
     }
 
@@ -90,6 +90,12 @@ function doGet(e) {
     if (!id) throw new Error("معرّف الطلب مفقود.");
 
     const reason = String(e.parameter.reason || "").trim();
+
+    if (action === "delete") {
+      deleteBooking_(id);
+      return jsonp_(callback, {ok: true, status: "deleted"});
+    }
+
     if (action === "reject" && !reason) {
       throw new Error("سبب الرفض مطلوب.");
     }
@@ -221,6 +227,30 @@ function findParticipantsByHeader_(sheet, row) {
     }
   }
   return "";
+}
+
+
+/**
+ * حذف الطلب من Firestore.
+ * يبقى الرد الأصلي محفوظاً في Google Sheet كسجل مرجعي.
+ */
+function deleteBooking_(documentId) {
+  const url =
+    `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/${COLLECTION}/${encodeURIComponent(documentId)}`;
+
+  const response = UrlFetchApp.fetch(url, {
+    method: "delete",
+    muteHttpExceptions: true
+  });
+
+  const code = response.getResponseCode();
+
+  // 200 = تم الحذف، 404 = غير موجود أصلاً
+  if (code !== 200 && code !== 404) {
+    throw new Error(
+      "تعذر حذف الطلب من Firestore: " + response.getContentText()
+    );
+  }
 }
 
 function getFirestoreDocument_(documentId) {
