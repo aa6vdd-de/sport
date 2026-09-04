@@ -1,33 +1,25 @@
-الخطوة الثانية - Firebase Firestore
+تحديث القبول/الرفض + البريد الإلكتروني
 
-1) افتح Firebase Console > Databases & Storage > Firestore Database.
-2) اختر Create database.
-3) اختر موقع قاعدة البيانات المناسب.
-4) أثناء التطوير فقط يمكنك اختيار Test mode.
-5) بعد إنشاء Firestore افتح Rules وضع محتوى firestore.rules ثم Publish.
-6) ارفع index.html الجديد إلى GitHub Pages بدل النسخة القديمة.
+1) GitHub:
+   - استبدل index.html الحالي بالملف الجديد index.html.
 
-المجموعة المستخدمة في Firestore:
-bookings
+2) Apps Script:
+   - استبدل كود Code.gs بالكامل بالكود الجديد.
+   - احفظ.
+   - شغّل setupTrigger مرة واحدة فقط إذا لم تكن شغّلته سابقاً.
+   - شغّل syncExistingRows مرة واحدة فقط الآن لإصلاح البريد واسم النشاط في الطلبات القديمة.
 
-الحقول التي سيقرأها الموقع:
-name
-email
-phone
-activityName
-participantsCount
-category
-venue
-bookingMethod
-date
-time
-status
-createdAt
+3) مهم جداً: تحديث نشر Web App
+   - Deploy > Manage deployments
+   - اختر النشر الحالي ثم Edit
+   - Version: New version
+   - Deploy
+   - حافظ على نفس Web App URL إن أمكن.
+   - Execute as: Me
+   - Who has access: Anyone (أو أي خيار يسمح لموقع GitHub باستدعائه حسب حسابك).
 
-مهم:
-القواعد الموجودة في firestore.rules مفتوحة للتجربة فقط وليست آمنة للنشر العام.
-بعد أن ننتهي من الربط، الأفضل إضافة Firebase Authentication وقفل الكتابة على حساب الإدارة فقط.
-
-الخطوة الثالثة لاحقاً:
-Google Apps Script سيأخذ كل رد جديد من Google Form/Google Sheet ويضيفه تلقائياً إلى collection اسمها bookings.
-كما سنربط قرار القبول/الرفض بإرسال البريد.
+بعدها:
+- أي طلب جديد يظهر تلقائياً من الفورم.
+- زر قبول يرسل بريد قبول.
+- زر رفض يفتح خانة سبب الرفض، ثم يرسل بريد الرفض مع السبب.
+- الحالة تتغير في Firestore والموقع تلقائياً.

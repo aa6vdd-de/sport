@@ -43,6 +43,19 @@ th,td{padding:17px 16px;border-bottom:1px solid #edf1ee;text-align:right;font-si
 .btn{border:0;border-radius:10px;padding:9px 13px;font-weight:800;cursor:pointer;margin-left:5px}.btn-view{background:#e8f3ed;color:var(--green)}.btn-accept{background:#0f7b4f;color:#fff}.btn-reject{background:#ffe8e6;color:#cf4138}
 @media(max-width:1000px){.sidebar{width:235px}.main{margin-right:235px;width:calc(100% - 235px)}.stats{grid-template-columns:repeat(2,1fr)}.content{padding:20px}}
 @media(max-width:760px){.sidebar{position:relative;width:100%;min-height:auto}.app{display:block}.main{margin-right:0;width:100%}.topbar{height:auto;padding:20px;gap:12px;flex-direction:column}.stats{grid-template-columns:1fr}.panel-head{flex-direction:column;align-items:stretch}.filters{flex-direction:column}.search{min-width:0;width:100%}}
+
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;z-index:9999;padding:20px}
+.modal.show{display:flex}
+.modal-card{width:min(520px,100%);background:#fff;border-radius:20px;padding:24px;box-shadow:0 24px 70px rgba(0,0,0,.22)}
+.modal-card h3{margin:0 0 10px;color:var(--green);font-size:22px}
+.modal-card p{margin:0 0 14px;color:#6d7973;line-height:1.8}
+.modal-card textarea{width:100%;min-height:120px;resize:vertical;border:1px solid #dce5df;border-radius:12px;padding:12px;font:inherit;outline:none}
+.modal-card textarea:focus{border-color:#0f7b4f;box-shadow:0 0 0 3px rgba(15,123,79,.08)}
+.modal-actions{display:flex;gap:10px;justify-content:flex-start;margin-top:16px}
+.btn-cancel{background:#edf1ef;color:#4f5c56}
+.notice{position:fixed;left:24px;bottom:24px;background:#173f30;color:#fff;padding:12px 16px;border-radius:12px;display:none;z-index:10000;box-shadow:0 10px 30px rgba(0,0,0,.18)}
+.notice.show{display:block}
+
 </style>
 </head>
 <body>
@@ -116,11 +129,25 @@ th,td{padding:17px 16px;border-bottom:1px solid #edf1ee;text-align:right;font-si
 </div>
 
 
+
+<div class="modal" id="rejectModal">
+  <div class="modal-card">
+    <h3>رفض طلب الحجز</h3>
+    <p>اكتب سبب الرفض. سيصل هذا السبب إلى مقدم الطلب عبر البريد الإلكتروني.</p>
+    <textarea id="rejectReason" placeholder="مثال: الصالة محجوزة في الوقت المحدد، يرجى اختيار موعد آخر."></textarea>
+    <div class="modal-actions">
+      <button class="btn btn-reject" id="confirmRejectBtn">تأكيد الرفض وإرسال البريد</button>
+      <button class="btn btn-cancel" id="cancelRejectBtn">إلغاء</button>
+    </div>
+  </div>
+</div>
+<div class="notice" id="notice"></div>
+
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
 import {
-  getFirestore, collection, onSnapshot, doc, updateDoc,
-  query, orderBy, serverTimestamp
+  getFirestore, collection, onSnapshot,
+  query, orderBy
 } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -136,6 +163,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const bookingsRef = collection(db, "bookings");
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz_vpf2l99tUF3D3eOi_bTGFQ-0VmmwRasth9-eQqpGBEkisQqy3_q3mvRETWSwJvIY/exec";
 
 let bookings = [];
 
@@ -216,6 +244,107 @@ function render(){
 
 window.filterRows = render;
 
+
+let pendingRejectId = null;
+
+function showNotice(message){
+  const el = document.getElementById("notice");
+  el.textContent = message;
+  el.classList.add("show");
+  setTimeout(() => el.classList.remove("show"), 3500);
+}
+
+function callAppsScript(params){
+  return new Promise((resolve, reject) => {
+    const callback = "__sportCb_" + Date.now() + "_" + Math.floor(Math.random()*100000);
+    const script = document.createElement("script");
+    const timer = setTimeout(() => {
+      cleanup();
+      reject(new Error("انتهت مهلة الاتصال بالسكريبت"));
+    }, 20000);
+
+    function cleanup(){
+      clearTimeout(timer);
+      try{ delete window[callback]; }catch(_){}
+      script.remove();
+    }
+
+    window[callback] = (result) => {
+      cleanup();
+      if (result && result.ok) resolve(result);
+      else reject(new Error((result && result.error) || "تعذر تنفيذ العملية"));
+    };
+
+    const url = new URL(APPS_SCRIPT_URL);
+    Object.entries({...params, callback}).forEach(([k,v]) => url.searchParams.set(k, v ?? ""));
+    script.src = url.toString();
+    script.onerror = () => {
+      cleanup();
+      reject(new Error("تعذر الوصول إلى Apps Script"));
+    };
+    document.body.appendChild(script);
+  });
+}
+
+async function acceptBooking(id, btn){
+  if (!confirm("هل أنت متأكد من قبول هذا الطلب؟ سيتم إرسال بريد الموافقة إلى مقدم الطلب.")) return;
+  const old = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = "جارٍ الإرسال...";
+  try{
+    await callAppsScript({action:"accept", id});
+    showNotice("تم قبول الطلب وإرسال بريد الموافقة.");
+  }catch(err){
+    console.error(err);
+    alert("تعذر قبول الطلب: " + err.message);
+  }finally{
+    btn.disabled = false;
+    btn.textContent = old;
+  }
+}
+
+function openRejectModal(id){
+  pendingRejectId = id;
+  document.getElementById("rejectReason").value = "";
+  document.getElementById("rejectModal").classList.add("show");
+  setTimeout(() => document.getElementById("rejectReason").focus(), 80);
+}
+
+function closeRejectModal(){
+  pendingRejectId = null;
+  document.getElementById("rejectModal").classList.remove("show");
+}
+
+document.getElementById("cancelRejectBtn").addEventListener("click", closeRejectModal);
+document.getElementById("rejectModal").addEventListener("click", e => {
+  if (e.target.id === "rejectModal") closeRejectModal();
+});
+
+document.getElementById("confirmRejectBtn").addEventListener("click", async () => {
+  const reason = document.getElementById("rejectReason").value.trim();
+  if (!reason){
+    alert("اكتب سبب الرفض أولاً.");
+    return;
+  }
+  if (!pendingRejectId) return;
+
+  const btn = document.getElementById("confirmRejectBtn");
+  const old = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = "جارٍ الإرسال...";
+  try{
+    await callAppsScript({action:"reject", id:pendingRejectId, reason});
+    closeRejectModal();
+    showNotice("تم رفض الطلب وإرسال السبب عبر البريد.");
+  }catch(err){
+    console.error(err);
+    alert("تعذر رفض الطلب: " + err.message);
+  }finally{
+    btn.disabled = false;
+    btn.textContent = old;
+  }
+});
+
 document.getElementById("requestsBody").addEventListener("click", async (e) => {
   const btn = e.target.closest("button[data-action]");
   if (!btn) return;
@@ -231,27 +360,24 @@ document.getElementById("requestsBody").addEventListener("click", async (e) => {
 البريد: ${booking.email || "-"}
 رقم الجوال: ${booking.phone || "-"}
 النشاط/الفعالية: ${booking.activityName || "-"}
+عدد المشاركين: ${booking.participantsCount || "-"}
 الفئة: ${booking.category || "-"}
 مقر الحجز: ${booking.venue || "-"}
 طريقة الحجز: ${booking.bookingMethod || "-"}
 التاريخ: ${booking.date || "-"}
 الوقت: ${booking.time || "-"}
-عدد المشاركين: ${booking.participantsCount || "-"}`
+${booking.rejectionReason ? "سبب الرفض: " + booking.rejectionReason : ""}`
     );
     return;
   }
 
-  const newStatus = action === "accept" ? "مقبول" : "مرفوض";
-  if (!confirm(`هل أنت متأكد من ${action === "accept" ? "قبول" : "رفض"} هذا الطلب؟`)) return;
+  if (action === "accept"){
+    await acceptBooking(id, btn);
+    return;
+  }
 
-  try {
-    await updateDoc(doc(db, "bookings", id), {
-      status: newStatus,
-      decisionUpdatedAt: serverTimestamp()
-    });
-  } catch (err) {
-    console.error(err);
-    alert("تعذر تحديث الطلب. تأكد من تفعيل Firestore وقواعد الصلاحيات.");
+  if (action === "reject"){
+    openRejectModal(id);
   }
 });
 
